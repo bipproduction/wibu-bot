@@ -94,9 +94,6 @@ async function proccess({ ctx, command, event }: { ctx: any, command: any, event
 
     await ctx.reply(`[INFO] Menjalankan command ${command.project}...`);
 
-    console.log("[SLEEP]", 10000);
-    await new Promise((resolve) => setTimeout(resolve, 30000));
-
     // Jalankan perintah shell
     const result = await $`/bin/bash build.sh`.cwd(`/root/projects/staging/${command.project}/scripts`);
     await ctx.reply('[INFO] Command berhasil dijalankan.');
