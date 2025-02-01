@@ -91,14 +91,25 @@ bot.on('message', async (ctx) => {
 
 
 async function proccess({ ctx, command, event }: { ctx: Context, command: any, event: EventMessage }) {
-  // const build = await $`/bin/bash build.sh`.cwd(`/root/projects/staging/${command.project}/scripts`);
-  // console.log("[BUILD]", build.text());
-  const build = spawn([`/bin/bash`, `build.sh`], {
-    cwd: `/root/projects/staging/${command.project}/scripts`,
-  })
-  const res = await readableStreamToText(build.stdout)
-  ctx.reply(res)
-  eventLock = eventLock.filter((e) => e.id !== command.id);
+  try {
+    ctx.reply(`[INFO] Memulai build ${command.project}...`);
+    const build = spawn([`/bin/bash`, `build.sh`], {
+      cwd: `/root/projects/staging/${command.project}/scripts`,
+    })
+    const res = await readableStreamToText(build.stdout)
+    ctx.reply(res)
+    ctx.reply("[INFO] Build selesai.")
+    // time
+    ctx.reply(`[INFO] Durasi: ${formatDistanceToNow(new Date(event.startedAt), { addSuffix: true })}`)
+    eventLock = eventLock.filter((e) => e.id !== command.id);
+  } catch (error) {
+    console.error(error)
+    ctx.reply("[ERROR] Build gagal.")
+    ctx.reply(String(error))
+    ctx.reply(`[INFO] Durasi: ${formatDistanceToNow(new Date(event.startedAt), { addSuffix: true })}`)
+    eventLock = eventLock.filter((e) => e.id !== command.id);
+
+  }
 }
 
 // Mulai polling untuk menerima update
