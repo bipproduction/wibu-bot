@@ -2,14 +2,7 @@ import dedent from 'dedent';
 import { Bot, Context } from 'grammy';
 import { $ } from 'bun';
 import moment from 'moment';
-import { formatDistanceToNow } from 'date-fns';
-import { config } from 'dotenv';
-
-// Load environment variables
-config({
-  path: './.env',
-  override: true
-});
+import { formatDistanceToNow } from 'date-fns'
 
 // Types
 interface Command {
@@ -126,7 +119,7 @@ class BuildBot {
       await ctx.reply(`[INFO] Memulai build ${command.project}...`);
       
       // Execute build command
-      const result = await $`bun build.sh`.cwd(`~/projects/${command.project}/scripts`);
+      const result = await $`bun build.sh`.cwd(`/root/projects/staging/${command.project}/scripts`);
       
       await ctx.reply('[INFO] Build berhasil.');
       await ctx.reply(`[OUTPUT] ${result.text()}`);
