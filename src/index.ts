@@ -1,10 +1,11 @@
 // src/index.ts
 import dedent from 'dedent';
 import { Bot } from 'grammy';
-import { $ } from 'bun'
+import { $, spawn } from 'bun'
 import moment from 'moment';
 import { config } from 'dotenv'
 import { formatDistanceToNow } from 'date-fns';
+
 config({
   path: './.env',
   override: true
@@ -90,27 +91,8 @@ bot.on('message', async (ctx) => {
 
 
 async function proccess({ ctx, command, event }: { ctx: any, command: any, event: EventMessage }) {
-  try {
-
-    await ctx.reply(`[INFO] Menjalankan command ${command.project}...`);
-
-    // Jalankan perintah shell
-    const result = await $`/bin/bash build.sh`.cwd(`/root/projects/staging/${command.project}/scripts`);
-    await ctx.reply('[INFO] Command berhasil dijalankan.');
-    await ctx.reply(`[INFO] ${result.text()}`);
-
-  } catch (error) {
-    console.error(error);
-    await ctx.reply('[ERROR] Gagal menjalankan command.');
-    await ctx.reply(`[ERROR] ${error}`);
-  } finally {
-    console.log("[REMOVE LOCK]", event);
-    eventLock = eventLock.filter((event) => event.id !== command.id);
-    await ctx.reply('[INFO] Command selesai.');
-    const duration = formatDistanceToNow(new Date(event.startedAt), { addSuffix: true });
-    await ctx.reply(`[INFO] Selama: ${duration}`);
-  }
-
+  const build = await $`/bin/bash build.sh`.cwd(`/root/projects/staging/${command.project}/scripts`);
+  console.log("[BUILD]", build.text());
 }
 
 // Mulai polling untuk menerima update
