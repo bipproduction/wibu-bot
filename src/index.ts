@@ -5,6 +5,7 @@ import { config } from 'dotenv';
 import { Bot, Context } from 'grammy';
 import moment from 'moment';
 import fs from 'fs/promises'
+import { formatDistanceToNow } from 'date-fns';
 
 try {
   await fs.mkdir('/tmp/wibu-bot/logs', { recursive: true })
@@ -119,13 +120,24 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
   const decodedText = new TextDecoder();
   let messageBuffer: string = '';
   let logBuffer = '';
+  let timeoutId;
   try {
+    
     // Notify user that the build has started
     await ctx.reply(`[INFO] Memulai build ${command.project}...`);
 
     const child = spawn(['/bin/bash', 'build.sh'], {
-      cwd: `/root/projects/staging/${safeProjectName}/scripts`,
+      cwd: `/root/projects/staging/${safeProjectName}/scripts`
     })
+
+
+    const timeout = 300000; // 5 menit
+    timeoutId = setTimeout(() => {
+      child.kill();
+      ctx.reply('[ERROR] Build dibatalkan karena timeout.');
+      throw new Error('Build process timed out');
+    }, timeout);
+
 
     for await (const chunk of child.stdout) {
       const decodedChunk = decodedText.decode(chunk);
@@ -159,6 +171,13 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
   } finally {
     // Hapus lock setelah selesai
     eventLock.delete(command.id);
+    clearTimeout(timeoutId);
+    const duration = formatDistanceToNow(new Date(event.startedAt), { addSuffix: true });
+    await ctx.reply(
+      dedent`[INFO] Build selesai.
+      Durasi: ${duration}
+      User: @${event.user}`
+    );
   }
 }
 
