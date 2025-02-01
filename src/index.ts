@@ -97,7 +97,7 @@ async function proccess({ ctx, command, event }: { ctx: Context, command: any, e
       cwd: `/root/projects/staging/${command.project}/scripts`,
     })
     const res = await readableStreamToText(build.stdout)
-    ctx.reply(res)
+    console.log(res)
     ctx.reply("[INFO] Build selesai.")
     // time
     ctx.reply(`[INFO] Durasi: ${formatDistanceToNow(new Date(event.startedAt), { addSuffix: true })}`)
@@ -105,7 +105,7 @@ async function proccess({ ctx, command, event }: { ctx: Context, command: any, e
   } catch (error) {
     console.error(error)
     ctx.reply("[ERROR] Build gagal.")
-    ctx.reply(String(error))
+    ctx.reply(String(error).substring(0, 4096))
     ctx.reply(`[INFO] Durasi: ${formatDistanceToNow(new Date(event.startedAt), { addSuffix: true })}`)
     eventLock = eventLock.filter((e) => e.id !== command.id);
 
@@ -114,3 +114,15 @@ async function proccess({ ctx, command, event }: { ctx: Context, command: any, e
 
 // Mulai polling untuk menerima update
 bot.start();
+
+process.on('SIGINT', () => {
+  eventLock = [];
+  bot.stop();
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  eventLock = [];
+  bot.stop();
+  process.exit(0);
+});
