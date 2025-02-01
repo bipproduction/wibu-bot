@@ -134,10 +134,10 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
       console.log(decodedChunk);
 
       // Kirim sisa buffer jika ada
-      if (messageBuffer.length > 3000) {
+      if (messageBuffer.length > 2000) {
         while (messageBuffer.length > 0) {
           const partToSend = messageBuffer.slice(0, 2000); // Ambil 2000 karakter pertama
-          await ctx.reply(`[PROGRESS]\n${partToSend}`);
+          ctx.reply(`[PROGRESS]\n${partToSend}`);
           messageBuffer = messageBuffer.slice(2000); // Hapus bagian yang sudah dikirim
         }
       }
