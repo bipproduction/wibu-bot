@@ -43,6 +43,7 @@ const COMMAND_BUILD_STAGING: Command[] = [
 class BuildBot {
   private bot: Bot;
   private eventLock: EventMessage[] = [];
+  private result: string = '';
 
   constructor(token: string) {
     this.bot = new Bot(token);
@@ -58,7 +59,7 @@ class BuildBot {
     const help = COMMAND_BUILD_STAGING
       .map((command, k) => `${k + 1}. ${command.command} - ${command.description}`)
       .join('\n');
-      
+
     const helpText = dedent`
       PANDUAN SEDERHANA
 
@@ -66,7 +67,7 @@ class BuildBot {
       
       Ketik salah satu command di atas untuk memulai build.
     `;
-    
+
     await ctx.reply(helpText);
   }
 
@@ -85,7 +86,7 @@ class BuildBot {
 
   private async processBuildCommand(ctx: Context, command: Command): Promise<void> {
     const user = ctx.from?.username || 'unknown';
-    
+
     // Check if command is locked
     if (this.isCommandLocked(command.id)) {
       const lockedEvent = this.eventLock.find(event => event.id === command.id);
@@ -104,9 +105,9 @@ class BuildBot {
       command: command.command,
       startedAt: moment().format("YYYY-MM-DD HH:mm:ss"),
     };
-    
+
     this.eventLock.push(event);
-    
+
     try {
       this.executeBuild(ctx, command, event);
     } finally {
@@ -117,18 +118,19 @@ class BuildBot {
   private async executeBuild(ctx: Context, command: Command, event: EventMessage): Promise<void> {
     try {
       await ctx.reply(`[INFO] Memulai build ${command.project}...`);
-      
+
       // Execute build command
       const result = await $`/bin/bash build.sh`.cwd(`/root/projects/staging/${command.project}/scripts`);
-      
+      this.result = result.text();
+
       await ctx.reply('[INFO] Build berhasil.');
-      await ctx.reply(`[OUTPUT] ${result.text()}`);
-      
+      await ctx.reply(`[OUTPUT] ${this.result}`);
+
     } catch (error) {
       console.error('[BUILD ERROR]', error);
       await ctx.reply('[ERROR] Build gagal.');
-      await ctx.reply(`[ERROR] ${error instanceof Error ? error.message : String(error)}`);
-      
+      this.result = String(error);
+
     } finally {
       const duration = formatDistanceToNow(new Date(event.startedAt), { addSuffix: true });
       await ctx.reply(
@@ -136,6 +138,7 @@ class BuildBot {
         Durasi: ${duration}
         User: @${event.user}`
       );
+      await ctx.reply(`[OUTPUT] ${this.result}`);
     }
   }
 
