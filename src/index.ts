@@ -1,7 +1,7 @@
 // src/index.ts
 import dedent from 'dedent';
-import { Bot } from 'grammy';
-import { $, spawn } from 'bun'
+import { Bot, Context } from 'grammy';
+import { $, readableStreamToText, spawn } from 'bun'
 import moment from 'moment';
 import { config } from 'dotenv'
 import { formatDistanceToNow } from 'date-fns';
@@ -90,15 +90,15 @@ bot.on('message', async (ctx) => {
 });
 
 
-async function proccess({ ctx, command, event }: { ctx: any, command: any, event: EventMessage }) {
+async function proccess({ ctx, command, event }: { ctx: Context, command: any, event: EventMessage }) {
   // const build = await $`/bin/bash build.sh`.cwd(`/root/projects/staging/${command.project}/scripts`);
   // console.log("[BUILD]", build.text());
-  const build = spawn([`bin/bash`, `build.sh`], {
+  const build = spawn([`/bin/bash`, `build.sh`], {
     cwd: `/root/projects/staging/${command.project}/scripts`,
   })
 
-  const res = await new Response(build.stdout).text()
-  console.log("[BUILD]", res);
+  const res = await readableStreamToText(build.stdout)
+  ctx.reply(res)
 }
 
 // Mulai polling untuk menerima update
