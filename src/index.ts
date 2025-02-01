@@ -116,7 +116,7 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
     return;
   }
 
-  let messageBuffer = '';
+  let messageBuffer: string | null = null;
   let logBuffer = '';
   try {
     // Notify user that the build has started
@@ -128,15 +128,15 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
       console.log(chunk);
 
       // Kirim pesan jika buffer mendekati batas aman (2000 karakter)
-      if (messageBuffer.length >= 2000) {
-        await ctx.reply(`[PROGRESS]\n${messageBuffer}`);
+      if (messageBuffer!.length >= 2000) {
+        ctx.reply(`[PROGRESS]\n${messageBuffer}`);
         messageBuffer = ''; // Reset message buffer
       }
     }
 
     // Kirim sisa buffer jika ada
     if (messageBuffer) {
-      await ctx.reply(`[PROGRESS]\n${messageBuffer}`);
+      ctx.reply(`[PROGRESS]\n${messageBuffer}`);
     }
 
     await ctx.reply('[INFO] Build selesai.');
