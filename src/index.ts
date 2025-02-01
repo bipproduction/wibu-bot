@@ -1,5 +1,5 @@
 // src/index.ts
-import { $ } from 'bun';
+import { $, spawn } from 'bun';
 import dedent from 'dedent';
 import { config } from 'dotenv';
 import { Bot, Context } from 'grammy';
@@ -116,26 +116,42 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
     return;
   }
 
-  let messageBuffer: string | null = null;
+  let messageBuffer: string = "";
   let logBuffer = '';
   try {
     // Notify user that the build has started
     await ctx.reply(`[INFO] Memulai build ${command.project}...`);
 
-    for await (const chunk of $`cd /root/projects/staging/${safeProjectName}/scripts && /bin/bash build.sh`.lines()) {
-      messageBuffer += `${chunk}\n`;
+    // for await (const chunk of $`cd /root/projects/staging/${safeProjectName}/scripts && /bin/bash build.sh`.lines()) {
+    //   messageBuffer += `${chunk}\n`;
+    //   logBuffer += `${chunk}\n`;
+    //   console.log(chunk);
+
+    //   // Kirim pesan jika buffer mendekati batas aman (2000 karakter)
+    //   if (messageBuffer!.length >= 2000) {
+    //     ctx.reply(`[PROGRESS]\n${messageBuffer}`);
+    //     messageBuffer = ''; // Reset message buffer
+    //   }
+    // }
+
+    const child = spawn(['/bin/bash', 'build.sh'], {
+      cwd: `/root/projects/staging/${safeProjectName}/scripts`,
+    })
+
+    for await (const chunk of child.stdout) {
+      messageBuffer += chunk.toString() || "";
       logBuffer += `${chunk}\n`;
       console.log(chunk);
 
-      // Kirim pesan jika buffer mendekati batas aman (2000 karakter)
-      if (messageBuffer!.length >= 2000) {
+      // Kirim sisa buffer jika ada
+      if (messageBuffer.length >= 2000) {
         ctx.reply(`[PROGRESS]\n${messageBuffer}`);
         messageBuffer = ''; // Reset message buffer
       }
     }
 
     // Kirim sisa buffer jika ada
-    if (messageBuffer) {
+    if (messageBuffer.length > 0) {
       ctx.reply(`[PROGRESS]\n${messageBuffer}`);
     }
 
