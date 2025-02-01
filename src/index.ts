@@ -105,7 +105,6 @@ bot.on('message', async (ctx) => {
 });
 
 async function processBuild({ ctx, command, event }: { ctx: Context; command: any; event: EventMessage }) {
-  await fs
   // Validasi nama proyek
   const safeProjectName = /^[a-zA-Z0-9_-]+$/.test(command.project)
     ? command.project
@@ -123,14 +122,13 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
     // Notify user that the build has started
     await ctx.reply(`[INFO] Memulai build ${command.project}...`);
 
-    // Jalankan proses build
-    const process = $`cd /root/projects/staging/${safeProjectName}/scripts && /bin/bash build.sh`;
-    for await (const chunk of process.lines()) {
+    for await (const chunk of $`cd /root/projects/staging/${safeProjectName}/scripts && /bin/bash build.sh`.lines()) {
       messageBuffer += `${chunk}\n`;
       logBuffer += `${chunk}\n`;
+      console.log(chunk);
 
-      // Kirim pesan jika buffer mendekati batas aman (4000 karakter)
-      if (messageBuffer.length >= 4000) {
+      // Kirim pesan jika buffer mendekati batas aman (2000 karakter)
+      if (messageBuffer.length >= 2000) {
         await ctx.reply(`[PROGRESS]\n${messageBuffer}`);
         messageBuffer = ''; // Reset message buffer
       }
