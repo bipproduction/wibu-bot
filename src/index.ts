@@ -129,12 +129,10 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
     const child = spawn(['/bin/bash', 'build.sh'], {
       cwd: `/root/projects/staging/${safeProjectName}/scripts`
     })
-
-
     const timeout = 300000; // 5 menit
     timeoutId = setTimeout(() => {
-      child.kill();
       ctx.reply('[ERROR] Build dibatalkan karena timeout.');
+      child.kill();
       throw new Error('Build process timed out');
     }, timeout);
 
@@ -161,7 +159,6 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
       messageBuffer = '';
     }
 
-    await ctx.reply('[INFO] Build selesai.');
     await Bun.write(`/tmp/wibu-bot/logs/build-${command.project}-out.log`, logBuffer);
     logBuffer = '';
   } catch (error) {
