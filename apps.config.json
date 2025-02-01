@@ -1,0 +1,31 @@
+{
+    "apps": [
+        {
+            "name": "wibu-bot-3040",
+            "script": "bun",
+            "args": "--bun --smol --env-file=/root/projects/wibu-bot/.env run start",
+            "exec_mode": "fork",
+            "instances": 1,
+            "env": {
+                "NODE_ENV": "production",
+                "PORT": 3040
+            },
+            "error_file": "/root/projects/staging/hipmi/logs/wibu-bot-3040/error.log",
+            "out_file": "/root/projects/staging/hipmi/logs/wibu-bot-3040/output.log",
+            "log_date_format": "YYYY-MM-DD HH:mm:ss",
+            "max_memory_restart": "1G",
+            "autorestart": true,
+            "watch": false,
+            "wait_ready": true,
+            "restart_delay": 4000,
+            "merge_logs": true,
+            "time": true,
+            "max_size": "10M",
+            "retain": 5,
+            "compress": true,
+            "source_map_support": false,
+            "cwd": "/root/projects/wibu-bot",
+            "namespace": "wibu-bot"
+        }
+    ]
+}
