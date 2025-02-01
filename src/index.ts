@@ -91,8 +91,14 @@ bot.on('message', async (ctx) => {
 
 
 async function proccess({ ctx, command, event }: { ctx: any, command: any, event: EventMessage }) {
-  const build = await $`/bin/bash build.sh`.cwd(`/root/projects/staging/${command.project}/scripts`);
-  console.log("[BUILD]", build.text());
+  // const build = await $`/bin/bash build.sh`.cwd(`/root/projects/staging/${command.project}/scripts`);
+  // console.log("[BUILD]", build.text());
+  const build = spawn([`bin/bash`, `build.sh`], {
+    cwd: `/root/projects/staging/${command.project}/scripts`,
+  })
+
+  const res = await new Response(build.stdout).text()
+  console.log("[BUILD]", res);
 }
 
 // Mulai polling untuk menerima update
