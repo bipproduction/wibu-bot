@@ -10,9 +10,6 @@
                 "NODE_ENV": "production",
                 "PORT": 3040
             },
-            "error_file": "/root/projects/staging/hipmi/logs/wibu-bot-3040/error.log",
-            "out_file": "/root/projects/staging/hipmi/logs/wibu-bot-3040/output.log",
-            "log_date_format": "YYYY-MM-DD HH:mm:ss",
             "max_memory_restart": "1G",
             "autorestart": true,
             "watch": false,
