@@ -146,10 +146,12 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
     // Kirim sisa buffer jika ada
     if (messageBuffer.length > 0) {
       await ctx.reply(`[PROGRESS]\n${messageBuffer}`);
+      messageBuffer = '';
     }
 
     await ctx.reply('[INFO] Build selesai.');
     await Bun.write(`/tmp/wibu-bot/logs/build-${command.project}-out.log`, logBuffer);
+    logBuffer = '';
   } catch (error) {
     console.error('[BUILD ERROR]', error);
     await ctx.reply(`[ERROR]\nBuild gagal:${String(error)}`);
