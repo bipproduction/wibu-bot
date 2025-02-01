@@ -102,12 +102,14 @@ async function proccess({ ctx, command, event }: { ctx: Context, command: any, e
     // time
     ctx.reply(`[INFO] Durasi: ${formatDistanceToNow(new Date(event.startedAt), { addSuffix: true })}`)
     eventLock = eventLock.filter((e) => e.id !== command.id);
+    await Bun.write(`/tmp/wibu-bot/${command.project}-build.log`, res)
   } catch (error) {
     console.error(error)
     ctx.reply("[ERROR] Build gagal.")
     ctx.reply(String(error).substring(0, 4096))
     ctx.reply(`[INFO] Durasi: ${formatDistanceToNow(new Date(event.startedAt), { addSuffix: true })}`)
     eventLock = eventLock.filter((e) => e.id !== command.id);
+    await Bun.write(`/tmp/wibu-bot/${command.project}-error.log`, String(error))
 
   }
 }
