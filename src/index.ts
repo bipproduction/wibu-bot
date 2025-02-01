@@ -96,9 +96,9 @@ async function proccess({ ctx, command, event }: { ctx: Context, command: any, e
   const build = spawn([`/bin/bash`, `build.sh`], {
     cwd: `/root/projects/staging/${command.project}/scripts`,
   })
-
   const res = await readableStreamToText(build.stdout)
   ctx.reply(res)
+  eventLock = eventLock.filter((e) => e.id !== command.id);
 }
 
 // Mulai polling untuk menerima update
