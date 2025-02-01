@@ -1,31 +1,28 @@
+// src/index.ts
 import dedent from 'dedent';
-import { Bot, Context } from 'grammy';
-import { $ } from 'bun';
+import { Bot } from 'grammy';
+import { $ } from 'bun'
 import moment from 'moment';
-import { formatDistanceToNow } from 'date-fns'
+import { config } from 'dotenv'
+import { formatDistanceToNow } from 'date-fns';
+config({
+  path: './.env',
+  override: true
+})
 
-// Types
-interface Command {
-  id: string;
-  project: string;
-  command: string;
-  description: string;
-}
+type EventMessage = { id: string, user: string, command: string, startedAt: string }
 
-interface EventMessage {
-  id: string;
-  user: string;
-  command: string;
-  startedAt: string;
-}
-
-// Constants
+// Ganti dengan token bot Anda
 const BOT_TOKEN = Bun.env.BOT_TOKEN;
+
 if (!BOT_TOKEN) {
   throw new Error("BOT_TOKEN must be defined");
 }
 
-const COMMAND_BUILD_STAGING: Command[] = [
+// Inisialisasi bot Telegram
+const bot = new Bot(BOT_TOKEN);
+
+const commandBuildStaging = [
   {
     id: "1",
     project: 'hipmi',
@@ -38,124 +35,86 @@ const COMMAND_BUILD_STAGING: Command[] = [
     command: '/build_darmasaba_staging',
     description: 'build project darmasaba staging'
   }
-];
+]
 
-class BuildBot {
-  private bot: Bot;
-  private eventLock: EventMessage[] = [];
-  private result: string = '';
+let eventLock: EventMessage[] = [];
 
-  constructor(token: string) {
-    this.bot = new Bot(token);
-    this.setupHandlers();
-  }
+// Handler untuk menerima pesan
+bot.on('message', async (ctx) => {
+  const message = ctx.message.text;
 
-  private setupHandlers(): void {
-    this.bot.command('start', this.handleStart.bind(this));
-    this.bot.on('message', this.handleMessage.bind(this));
-  }
-
-  private async handleStart(ctx: Context): Promise<void> {
-    const help = COMMAND_BUILD_STAGING
-      .map((command, k) => `${k + 1}. ${command.command} - ${command.description}`)
-      .join('\n');
-
+  if (message === '/start') {
+    const help = commandBuildStaging.map((command, k) => k + 1 + '. ' + command.command).join('\n');
     const helpText = dedent`
-      PANDUAN SEDERHANA
+    PANDUAN SEDERHANA
 
-      ${help}
-      
-      Ketik salah satu command di atas untuk memulai build.
-    `;
-
+    ${help}
+    `
     await ctx.reply(helpText);
   }
 
-  private async handleMessage(ctx: Context): Promise<void> {
-    const message = ctx.message?.text;
-    if (!message?.startsWith('/build')) return;
+  console.log("[MESSAGE]", ctx.message.text);
 
-    const command = COMMAND_BUILD_STAGING.find((cmd) => cmd.command === message);
-    if (!command) {
-      await ctx.reply('Command tidak ditemukan. Ketik /start untuk melihat daftar command.');
+  if (message?.startsWith('/build')) {
+    const command = commandBuildStaging.find((cmd) => cmd.command === message);
+    if (!command) return;
+
+    // Cek apakah perintah sedang berjalan
+    const isLocked = eventLock.find((event) => event.id === command.id);
+    const user = ctx.from.username || 'unknown';
+
+    if (isLocked) {
+      console.log("[LOCKED]", "Command sedang dijalankan", isLocked.command);
+      await ctx.reply(`Command ${command.project} sedang dijalankan, silakan coba lagi nanti.`);
       return;
     }
 
-    await this.processBuildCommand(ctx, command);
-  }
 
-  private async processBuildCommand(ctx: Context, command: Command): Promise<void> {
-    const user = ctx.from?.username || 'unknown';
-
-    // Check if command is locked
-    if (this.isCommandLocked(command.id)) {
-      const lockedEvent = this.eventLock.find(event => event.id === command.id);
-      await ctx.reply(
-        dedent`Command ${command.project} sedang dijalankan oleh @${lockedEvent?.user}.
-        Dimulai: ${lockedEvent?.startedAt}
-        Silakan coba lagi nanti.`
-      );
-      return;
-    }
-
-    // Add command to lock
-    const event: EventMessage = {
+    // Tambahkan perintah ke eventLock
+    const event = {
       id: command.id,
-      user,
+      user: user,
       command: command.command,
       startedAt: moment().format("YYYY-MM-DD HH:mm:ss"),
     };
 
-    this.eventLock.push(event);
+    console.log("[ADD LOCK]", event);
+    eventLock.push(event);
 
-    try {
-      this.executeBuild(ctx, command, event);
-    } finally {
-      this.removeLock(command.id);
-    }
+    // Jalankan perintah
+    proccess({ ctx, command, event });
+
   }
 
-  private async executeBuild(ctx: Context, command: Command, event: EventMessage): Promise<void> {
-    try {
-      await ctx.reply(`[INFO] Memulai build ${command.project}...`);
+});
 
-      // Execute build command
-      const result = await $`/bin/bash build.sh`.cwd(`/root/projects/staging/${command.project}/scripts`);
-      this.result = result.text();
 
-      await ctx.reply('[INFO] Build berhasil.');
-      await ctx.reply(`[OUTPUT] ${this.result}`);
+async function proccess({ ctx, command, event }: { ctx: any, command: any, event: EventMessage }) {
+  try {
 
-    } catch (error) {
-      console.error('[BUILD ERROR]', error);
-      await ctx.reply('[ERROR] Build gagal.');
-      this.result = String(error);
+    await ctx.reply(`[INFO] Menjalankan command ${command.project}...`);
 
-    } finally {
-      const duration = formatDistanceToNow(new Date(event.startedAt), { addSuffix: true });
-      await ctx.reply(
-        dedent`[INFO] Build selesai.
-        Durasi: ${duration}
-        User: @${event.user}`
-      );
-      await ctx.reply(`[OUTPUT] ${this.result}`);
-    }
+    console.log("[SLEEP]", 10000);
+    await new Promise((resolve) => setTimeout(resolve, 30000));
+
+    // Jalankan perintah shell
+    const result = await $`/bin/bash build.sh`.cwd(`/root/projects/staging/${command.project}/scripts`);
+    await ctx.reply('[INFO] Command berhasil dijalankan.');
+    await ctx.reply(`[INFO] ${result.text()}`);
+
+  } catch (error) {
+    console.error(error);
+    await ctx.reply('[ERROR] Gagal menjalankan command.');
+    await ctx.reply(`[ERROR] ${error}`);
+  } finally {
+    console.log("[REMOVE LOCK]", event);
+    eventLock = eventLock.filter((event) => event.id !== command.id);
+    await ctx.reply('[INFO] Command selesai.');
+    const duration = formatDistanceToNow(new Date(event.startedAt), { addSuffix: true });
+    await ctx.reply(`[INFO] Selama: ${duration}`);
   }
 
-  private isCommandLocked(commandId: string): boolean {
-    return this.eventLock.some(event => event.id === commandId);
-  }
-
-  private removeLock(commandId: string): void {
-    this.eventLock = this.eventLock.filter(event => event.id !== commandId);
-  }
-
-  public start(): void {
-    this.bot.start();
-    console.log('[BOT] Starting...');
-  }
 }
 
-// Initialize and start bot
-const buildBot = new BuildBot(BOT_TOKEN);
-buildBot.start();
+// Mulai polling untuk menerima update
+bot.start();
