@@ -1,130 +1,158 @@
 // src/index.ts
 import dedent from 'dedent';
 import { Bot, Context } from 'grammy';
-import { $, readableStreamToText, spawn } from 'bun'
+import { $, readableStreamToText, spawn } from 'bun';
 import moment from 'moment';
-import { config } from 'dotenv'
+import { config } from 'dotenv';
 import { formatDistanceToNow } from 'date-fns';
+import fs from 'fs/promises';
 
+// Load environment variables
 config({
   path: './.env',
-  override: true
-})
+  override: true,
+});
 
-type EventMessage = { id: string, user: string, command: string, startedAt: string }
+type EventMessage = {
+  id: string;
+  user: string;
+  command: string;
+  startedAt: string;
+};
 
-// Ganti dengan token bot Anda
+// Validate BOT_TOKEN
 const BOT_TOKEN = Bun.env.BOT_TOKEN;
-
 if (!BOT_TOKEN) {
-  throw new Error("BOT_TOKEN must be defined");
+  throw new Error('BOT_TOKEN must be defined');
 }
 
-// Inisialisasi bot Telegram
+// Initialize Telegram bot
 const bot = new Bot(BOT_TOKEN);
 
+// Define available build commands
 const commandBuildStaging = [
   {
-    id: "1",
+    id: '1',
     project: 'hipmi',
     command: '/build_hipmi_staging',
-    description: 'build project hipmi staging'
+    description: 'Build project hipmi staging',
   },
   {
-    id: "2",
+    id: '2',
     project: 'darmasaba',
     command: '/build_darmasaba_staging',
-    description: 'build project darmasaba staging'
-  }
-]
+    description: 'Build project darmasaba staging',
+  },
+];
 
-let eventLock: EventMessage[] = [];
+// Use a Map for efficient locking mechanism
+const eventLock = new Map<string, EventMessage>();
 
-// Handler untuk menerima pesan
+// Handler for incoming messages
 bot.on('message', async (ctx) => {
   const message = ctx.message.text;
 
+  // Handle /start command
   if (message === '/start') {
-    const help = commandBuildStaging.map((command, k) => k + 1 + '. ' + command.command).join('\n');
+    const help = commandBuildStaging
+      .map((command, index) => `${index + 1}. ${command.command} - ${command.description}`)
+      .join('\n');
     const helpText = dedent`
-    PANDUAN SEDERHANA
-
-    ${help}
-    `
+      PANDUAN SEDERHANA
+      ${help}
+    `;
     await ctx.reply(helpText);
+    return;
   }
 
-  console.log("[MESSAGE]", ctx.message.text);
 
+  // Handle build commands
   if (message?.startsWith('/build')) {
     const command = commandBuildStaging.find((cmd) => cmd.command === message);
-    if (!command) return;
-
-    // Cek apakah perintah sedang berjalan
-    const isLocked = eventLock.find((event) => event.id === command.id);
-    const user = ctx.from.username || 'unknown';
-
-    if (isLocked) {
-      console.log("[LOCKED]", "Command sedang dijalankan", isLocked.command);
-      await ctx.reply(`Command ${command.project} sedang dijalankan, silakan coba lagi nanti.`);
+    if (!command) {
+      await ctx.reply('Command tidak dikenali.');
       return;
     }
 
+    const user = ctx.from.username || 'unknown';
 
-    // Tambahkan perintah ke eventLock
-    const event = {
+    // Check if the command is already running
+    if (eventLock.has(command.id)) {
+      const lockedEvent = eventLock.get(command.id)!;
+      console.log('[LOCKED]', `Command sedang dijalankan: ${lockedEvent.command}`);
+      await ctx.reply(`Command ${command.project} sedang dijalankan oleh ${lockedEvent.user}, silakan coba lagi nanti.`);
+      return;
+    }
+
+    // Add command to lock
+    const event: EventMessage = {
       id: command.id,
-      user: user,
+      user,
       command: command.command,
-      startedAt: moment().format("YYYY-MM-DD HH:mm:ss"),
+      startedAt: moment().format('YYYY-MM-DD HH:mm:ss'),
     };
+    eventLock.set(command.id, event);
 
-    console.log("[ADD LOCK]", event);
-    eventLock.push(event);
-
-    // Jalankan perintah
-    proccess({ ctx, command, event });
-
+    // Process the build command
+    processBuild({ ctx, command, event });
   }
-
 });
 
+async function processBuild({ ctx, command, event }: { ctx: Context; command: any; event: EventMessage }) {
+  // Validasi nama proyek
+  const safeProjectName = /^[a-zA-Z0-9_-]+$/.test(command.project)
+    ? command.project
+    : null;
 
-async function proccess({ ctx, command, event }: { ctx: Context, command: any, event: EventMessage }) {
+  if (!safeProjectName) {
+    await ctx.reply('[ERROR] Nama proyek tidak valid.');
+    eventLock.delete(command.id); // Pastikan lock dihapus
+    return;
+  }
+
+  let messageBuffer = '';
   try {
-    ctx.reply(`[INFO] Memulai build ${command.project}...`);
-    const build = spawn([`/bin/bash`, `build.sh`], {
-      cwd: `/root/projects/staging/${command.project}/scripts`,
-    })
-    const res = await readableStreamToText(build.stdout)
-    console.log(res)
-    ctx.reply("[INFO] Build selesai.")
-    // time
-    ctx.reply(`[INFO] Durasi: ${formatDistanceToNow(new Date(event.startedAt), { addSuffix: true })}`)
-    eventLock = eventLock.filter((e) => e.id !== command.id);
-    await Bun.write(`/tmp/wibu-bot/${command.project}-build.log`, res)
-  } catch (error) {
-    console.error(error)
-    ctx.reply("[ERROR] Build gagal.")
-    ctx.reply(String(error).substring(0, 4096))
-    ctx.reply(`[INFO] Durasi: ${formatDistanceToNow(new Date(event.startedAt), { addSuffix: true })}`)
-    eventLock = eventLock.filter((e) => e.id !== command.id);
-    await Bun.write(`/tmp/wibu-bot/${command.project}-error.log`, String(error))
+    // Notify user that the build has started
+    await ctx.reply(`[INFO] Memulai build ${command.project}...`);
 
+    // Jalankan proses build
+    const process = $`cd /root/projects/staging/${safeProjectName}/scripts && /bin/bash build.sh`;
+    for await (const chunk of process.lines()) {
+      messageBuffer += `${chunk}\n`;
+
+      // Kirim pesan jika buffer mendekati batas aman (4000 karakter)
+      if (messageBuffer.length >= 4000) {
+        await ctx.reply(`[PROGRESS]\n${messageBuffer}`);
+        messageBuffer = ''; // Reset message buffer
+      }
+    }
+
+    // Kirim sisa buffer jika ada
+    if (messageBuffer) {
+      await ctx.reply(`[PROGRESS]\n${messageBuffer}`);
+    }
+
+    await ctx.reply('[INFO] Build selesai.');
+  } catch (error) {
+    await ctx.reply(`[ERROR]\nBuild gagal:${String(error)}`);
+  } finally {
+    // Hapus lock setelah selesai
+    eventLock.delete(command.id);
   }
 }
 
-// Mulai polling untuk menerima update
+// Start polling for updates
 bot.start();
 
+// Handle shutdown signals
 process.on('SIGINT', () => {
-  eventLock = [];
+  eventLock.clear();
   bot.stop();
   process.exit(0);
 });
 
 process.on('SIGTERM', () => {
-  eventLock = [];
+  eventLock.clear();
   bot.stop();
   process.exit(0);
 });
