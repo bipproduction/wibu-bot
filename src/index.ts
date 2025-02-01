@@ -1,11 +1,17 @@
 // src/index.ts
+import { $ } from 'bun';
 import dedent from 'dedent';
-import { Bot, Context } from 'grammy';
-import { $, readableStreamToText, spawn } from 'bun';
-import moment from 'moment';
 import { config } from 'dotenv';
-import { formatDistanceToNow } from 'date-fns';
-import fs from 'fs/promises';
+import { Bot, Context } from 'grammy';
+import moment from 'moment';
+import fs from 'fs/promises'
+
+try {
+  await fs.mkdir('/tmp/wibu-bot/logs', { recursive: true })
+} catch (error) {
+  console.error(error)
+  process.exit(1)
+}
 
 // Load environment variables
 config({
@@ -99,6 +105,7 @@ bot.on('message', async (ctx) => {
 });
 
 async function processBuild({ ctx, command, event }: { ctx: Context; command: any; event: EventMessage }) {
+  await fs
   // Validasi nama proyek
   const safeProjectName = /^[a-zA-Z0-9_-]+$/.test(command.project)
     ? command.project
@@ -111,6 +118,7 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
   }
 
   let messageBuffer = '';
+  let logBuffer = '';
   try {
     // Notify user that the build has started
     await ctx.reply(`[INFO] Memulai build ${command.project}...`);
@@ -119,6 +127,7 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
     const process = $`cd /root/projects/staging/${safeProjectName}/scripts && /bin/bash build.sh`;
     for await (const chunk of process.lines()) {
       messageBuffer += `${chunk}\n`;
+      logBuffer += `${chunk}\n`;
 
       // Kirim pesan jika buffer mendekati batas aman (4000 karakter)
       if (messageBuffer.length >= 4000) {
@@ -133,9 +142,11 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
     }
 
     await ctx.reply('[INFO] Build selesai.');
+    await Bun.write(`/tmp/wibu-bot/logs/build-${command.project}-out.log`, logBuffer);
   } catch (error) {
     console.error('[BUILD ERROR]', error);
     await ctx.reply(`[ERROR]\nBuild gagal:${String(error)}`);
+    await Bun.write(`/tmp/wibu-bot/logs/build-${command.project}-err.log`, JSON.stringify(error));
   } finally {
     // Hapus lock setelah selesai
     eventLock.delete(command.id);
