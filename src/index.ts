@@ -108,7 +108,7 @@ class BuildBot {
     this.eventLock.push(event);
     
     try {
-      await this.executeBuild(ctx, command, event);
+      this.executeBuild(ctx, command, event);
     } finally {
       this.removeLock(command.id);
     }
@@ -119,7 +119,7 @@ class BuildBot {
       await ctx.reply(`[INFO] Memulai build ${command.project}...`);
       
       // Execute build command
-      const result = await $`bun build.sh`.cwd(`/root/projects/staging/${command.project}/scripts`);
+      const result = await $`/bin/bash build.sh`.cwd(`/root/projects/staging/${command.project}/scripts`);
       
       await ctx.reply('[INFO] Build berhasil.');
       await ctx.reply(`[OUTPUT] ${result.text()}`);
