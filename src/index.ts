@@ -134,6 +134,7 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
 
     await ctx.reply('[INFO] Build selesai.');
   } catch (error) {
+    console.error('[BUILD ERROR]', error);
     await ctx.reply(`[ERROR]\nBuild gagal:${String(error)}`);
   } finally {
     // Hapus lock setelah selesai
