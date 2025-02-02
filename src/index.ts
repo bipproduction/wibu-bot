@@ -130,8 +130,12 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
     if (!bun) {
       throw new Error("bun not found");
     }
-    const child = spawn([bun, 'build.sh'], {
-      cwd: `/root/projects/staging/${safeProjectName}/scripts`
+    const child = spawn(["/bin/bash", 'build.sh'], {
+      cwd: `/root/projects/staging/${safeProjectName}/scripts`,
+      env: {
+        ...process.env,
+        NODE_ENV: 'production',
+      }
     })
     const timeout = 900000; // 5 menit
     timeoutId = setTimeout(() => {
