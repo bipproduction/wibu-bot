@@ -131,12 +131,7 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
       throw new Error("bun not found");
     }
     const child = spawn(["/bin/bash", 'build.sh'], {
-      cwd: `/root/projects/staging/${safeProjectName}/scripts`,
-      env: {
-        ...process.env,
-        NODE_ENV: 'production',
-      }
-    })
+      cwd: `/root/projects/staging/${safeProjectName}/scripts`})
     const timeout = 900000; // 5 menit
     timeoutId = setTimeout(() => {
       ctx.reply('[ERROR] Build dibatalkan karena timeout.');
