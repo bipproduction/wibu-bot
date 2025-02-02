@@ -126,10 +126,14 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
     // Notify user that the build has started
     await ctx.reply(`[INFO] Memulai build ${command.project}...`);
 
-    const child = spawn(['/bin/bash', 'build.sh'], {
+    const bun = Bun.which("bun");
+    if (!bun) {
+      throw new Error("bun not found");
+    }
+    const child = spawn([bun, 'build.sh'], {
       cwd: `/root/projects/staging/${safeProjectName}/scripts`
     })
-    const timeout = 300000; // 5 menit
+    const timeout = 900000; // 5 menit
     timeoutId = setTimeout(() => {
       ctx.reply('[ERROR] Build dibatalkan karena timeout.');
       child.kill();
