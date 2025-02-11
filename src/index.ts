@@ -1,5 +1,5 @@
 // src/index.ts
-import { $, spawn } from 'bun';
+import { $, spawn, Subprocess } from 'bun';
 import dedent from 'dedent';
 import { config } from 'dotenv';
 import { Bot, Context, InputFile } from 'grammy';
@@ -158,7 +158,22 @@ bot.on('message', async (ctx) => {
   }
 });
 
+
+let buildTimer: NodeJS.Timeout | null = null;
+let count = 0
+const decodedText = new TextDecoder();
+let child: Subprocess<"ignore", "pipe", "inherit"> | null = null;
 async function processBuild({ ctx, command, event }: { ctx: Context; command: any; event: EventMessage }) {
+  buildTimer = setInterval(async () => {
+    ctx.reply(`[INFO] processing ${count} ...`);
+    count++
+    if (count > 15) {
+      clearInterval(buildTimer as NodeJS.Timeout);
+      ctx.reply(`[INFO] processing selesai`);
+      child?.kill();
+    }
+  }, 1000) as NodeJS.Timeout;
+
   const logPath = `/tmp/wibu-bot/logs/build-${command.project}-out.log`
   const errorPath = `/tmp/wibu-bot/logs/build-${command.project}-err.log`
   await fs.unlink(logPath).catch(() => { })
@@ -175,25 +190,39 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
     return;
   }
 
+  try {
+    await ctx.reply(`[INFO] Memulai build ${command.project}...`);
+    child = spawn(["/bin/bash", 'build.sh'], {
+      cwd: `/root/projects/staging/${safeProjectName}/scripts`
+    })
+    for await (const chunk of child.stdout) {
+      const decodedChunk = decodedText.decode(chunk);
+      await fs.appendFile(logPath, decodedChunk);
+    }
 
-  await ctx.reply(`[INFO] Memulai build ${command.project}...`);
-  const { stdout, stderr, exitCode } = await $`FORCE_COLOR=1 /bin/bash build.sh`.cwd(`/root/projects/staging/${safeProjectName}/scripts`)
-    .nothrow()
-    .quiet();
+    for await (const chunk of child.stderr || []) {
+      const decodedChunk = decodedText.decode(chunk);
+      await fs.appendFile(errorPath, decodedChunk);
+    }
 
-  await fs.writeFile(logPath, stdout.toString("utf8"));
-  await fs.writeFile(errorPath, stderr.toString("utf8"));
-  await ctx.replyWithDocument(new InputFile(logPath));
-  await ctx.replyWithDocument(new InputFile(errorPath));
+    await ctx.replyWithDocument(new InputFile(logPath));
+    await ctx.replyWithDocument(new InputFile(errorPath));
 
-  const duration = formatDistanceToNow(new Date(event.startedAt), { addSuffix: true });
-  await ctx.reply(
-    dedent`
+    const duration = formatDistanceToNow(new Date(event.startedAt), { addSuffix: true });
+    await ctx.reply(
+      dedent`
     Build  : selesai.
-    status : ${exitCode === 0 ? 'success' : 'failed'}
+    status : ${child.exitCode === 0 ? 'success' : 'failed'}
     Durasi : ${duration}
     User   : @${event.user}`
-  );
+    );
+
+  } catch (error) {
+    ctx.reply('[ERROR] Build gagal');
+  } finally {
+    eventLock.delete(command.id);
+    clearInterval(buildTimer as NodeJS.Timeout);
+  }
 }
 
 // Start polling for updates

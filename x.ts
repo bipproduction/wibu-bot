@@ -1,6 +1,6 @@
 import { $ } from "bun";
 
-const { stdout, stderr, exitCode } = await $`ls -m`
+const { stdout, stderr, exitCode,  } = await $`htop`
   .nothrow()
   .quiet();
 

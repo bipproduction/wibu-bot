@@ -16,6 +16,7 @@
     "p-limit": "^6.2.0"
   },
   "devDependencies": {
+    "@types/node": "^22.13.1",
     "bun-types": "latest"
   },
   "module": "src/index.js"
