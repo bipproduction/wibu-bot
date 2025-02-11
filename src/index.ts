@@ -2,11 +2,13 @@
 import { $, spawn } from 'bun';
 import dedent from 'dedent';
 import { config } from 'dotenv';
-import { Bot, Context } from 'grammy';
+import { Bot, Context, InputFile } from 'grammy';
 import moment from 'moment';
 import fs from 'fs/promises'
 import { formatDistanceToNow } from 'date-fns';
+import path from 'path';
 const appPackage = Bun.file('./package.json').json();
+
 try {
   await fs.mkdir('/tmp/wibu-bot/logs', { recursive: true })
 } catch (error) {
@@ -65,6 +67,11 @@ bot.on('message', async (ctx) => {
     return;
   }
 
+  if(message === '/file'){
+    const filePath = path.join(__dirname, '../package.json');
+    await ctx.replyWithDocument(new InputFile(filePath));
+  }
+
   // Handle /start command
   if (message === '/start') {
     const help = commandBuildStaging
@@ -112,6 +119,14 @@ bot.on('message', async (ctx) => {
 });
 
 async function processBuild({ ctx, command, event }: { ctx: Context; command: any; event: EventMessage }) {
+  const logPath = `/tmp/wibu-bot/logs/build-${command.project}-out.log`
+  const errorPath = `/tmp/wibu-bot/logs/build-${command.project}-err.log`
+  const logFile = Bun.file(logPath)
+  const errorFile = Bun.file(errorPath)
+
+  await logFile.delete()
+  await errorFile.delete()
+
   // Validasi nama proyek
   const safeProjectName = /^[a-zA-Z0-9_-]+$/.test(command.project)
     ? command.project
@@ -151,35 +166,33 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
       const decodedChunk = decodedText.decode(chunk);
       messageBuffer += decodedChunk;
       logBuffer += `${decodedChunk}\n`;
-      console.log(decodedChunk);
+      // console.log(decodedChunk);
 
       // Kirim sisa buffer jika ada
       if (messageBuffer.length > 2000) {
         while (messageBuffer.length > 0) {
-          // const partToSend = messageBuffer.slice(0, 2000); // Ambil 2000 karakter pertama
-          ctx.reply(`[PROGRESS] ...`);
-          // messageBuffer = messageBuffer.slice(2000); // Hapus bagian yang sudah dikirim
+          await logFile.write(messageBuffer);
         }
       }
     }
 
-    // Kirim sisa buffer jika ada
-    // if (messageBuffer.length > 0) {
-    //   await ctx.reply(`[PROGRESS]\n${messageBuffer}`);
-    //   messageBuffer = '';
-    // }
+
+    if (messageBuffer.length > 0) {
+      await ctx.reply(`[PROGRESS]\n${messageBuffer}`);
+      messageBuffer = '';
+    }
 
     ctx.reply(`[SUCCESS] Build ${command.project} selesai.`);
-    const logPath = `/tmp/wibu-bot/logs/build-${command.project}-out.log`
+    
     await Bun.write(logPath, logBuffer);
-    await ctx.replyWithDocument(logPath);
+    await ctx.replyWithDocument(new InputFile(logPath));
     logBuffer = '';
   } catch (error) {
     console.error('[BUILD ERROR]', error);
     await ctx.reply(`[ERROR] Build gagal`);
-    const errorPath = `/tmp/wibu-bot/logs/build-${command.project}-err.log`
+    
     await Bun.write(errorPath, JSON.stringify(error));
-    await ctx.replyWithDocument(errorPath);
+    await ctx.replyWithDocument(new InputFile(errorPath));
   } finally {
     // Hapus lock setelah selesai
     eventLock.delete(command.id);
