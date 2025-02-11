@@ -169,10 +169,10 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
     count++
     if (count > 15) {
       clearInterval(buildTimer as NodeJS.Timeout);
-      ctx.reply(`[INFO] processing selesai`);
+      ctx.reply(`[INFO] processing selesai karena timeout`);
       child?.kill();
     }
-  }, 1000) as NodeJS.Timeout;
+  }, 1000 * 60) as NodeJS.Timeout;
 
   const logPath = `/tmp/wibu-bot/logs/build-${command.project}-out.log`
   const errorPath = `/tmp/wibu-bot/logs/build-${command.project}-err.log`
