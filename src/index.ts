@@ -122,7 +122,7 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
   let logBuffer = '';
   let timeoutId;
   try {
-    
+
     // Notify user that the build has started
     await ctx.reply(`[INFO] Memulai build ${command.project}...`);
 
@@ -131,7 +131,8 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
       throw new Error("bun not found");
     }
     const child = spawn(["/bin/bash", 'build.sh'], {
-      cwd: `/root/projects/staging/${safeProjectName}/scripts`})
+      cwd: `/root/projects/staging/${safeProjectName}/scripts`
+    })
     const timeout = 900000; // 5 menit
     timeoutId = setTimeout(() => {
       ctx.reply('[ERROR] Build dibatalkan karena timeout.');
@@ -149,25 +150,30 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
       // Kirim sisa buffer jika ada
       if (messageBuffer.length > 2000) {
         while (messageBuffer.length > 0) {
-          const partToSend = messageBuffer.slice(0, 2000); // Ambil 2000 karakter pertama
-          ctx.reply(`[PROGRESS]\n${partToSend}`);
-          messageBuffer = messageBuffer.slice(2000); // Hapus bagian yang sudah dikirim
+          // const partToSend = messageBuffer.slice(0, 2000); // Ambil 2000 karakter pertama
+          ctx.reply(`[PROGRESS] ...`);
+          // messageBuffer = messageBuffer.slice(2000); // Hapus bagian yang sudah dikirim
         }
       }
     }
 
     // Kirim sisa buffer jika ada
-    if (messageBuffer.length > 0) {
-      await ctx.reply(`[PROGRESS]\n${messageBuffer}`);
-      messageBuffer = '';
-    }
+    // if (messageBuffer.length > 0) {
+    //   await ctx.reply(`[PROGRESS]\n${messageBuffer}`);
+    //   messageBuffer = '';
+    // }
 
-    await Bun.write(`/tmp/wibu-bot/logs/build-${command.project}-out.log`, logBuffer);
+    ctx.reply(`[SUCCESS] Build ${command.project} selesai.`);
+    const logPath = `/tmp/wibu-bot/logs/build-${command.project}-out.log`
+    await Bun.write(logPath, logBuffer);
+    await ctx.replyWithDocument(logPath);
     logBuffer = '';
   } catch (error) {
     console.error('[BUILD ERROR]', error);
-    await ctx.reply(`[ERROR]\nBuild gagal:${String(error)}`);
-    await Bun.write(`/tmp/wibu-bot/logs/build-${command.project}-err.log`, JSON.stringify(error));
+    await ctx.reply(`[ERROR] Build gagal`);
+    const errorPath = `/tmp/wibu-bot/logs/build-${command.project}-err.log`
+    await Bun.write(errorPath, JSON.stringify(error));
+    await ctx.replyWithDocument(errorPath);
   } finally {
     // Hapus lock setelah selesai
     eventLock.delete(command.id);
