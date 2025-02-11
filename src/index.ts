@@ -161,11 +161,8 @@ bot.on('message', async (ctx) => {
 async function processBuild({ ctx, command, event }: { ctx: Context; command: any; event: EventMessage }) {
   const logPath = `/tmp/wibu-bot/logs/build-${command.project}-out.log`
   const errorPath = `/tmp/wibu-bot/logs/build-${command.project}-err.log`
-  const logFile = Bun.file(logPath)
-  const errorFile = Bun.file(errorPath)
-
-  await logFile.delete()
-  await errorFile.delete()
+  await fs.unlink(logPath).catch(() => { })
+  await fs.unlink(errorPath).catch(() => { })
 
   // Validasi nama proyek
   const safeProjectName = /^[a-zA-Z0-9_-]+$/.test(command.project)
@@ -178,30 +175,25 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
     return;
   }
 
-  try {
 
-    // Notify user that the build has started
-    await ctx.reply(`[INFO] Memulai build ${command.project}...`);
-    const buildText = await $`/bin/bash build.sh`.cwd(`/root/projects/staging/${safeProjectName}/scripts`).text();
-    ctx.reply(`[SUCCESS] Build ${command.project} selesai.`);
-    await Bun.write(logPath, buildText);
-    await ctx.replyWithDocument(new InputFile(logPath));
-  } catch (error) {
-    console.error('[BUILD ERROR]', error);
-    await ctx.reply(`[ERROR] Build gagal`);
+  await ctx.reply(`[INFO] Memulai build ${command.project}...`);
+  const { stdout, stderr, exitCode } = await $`FORCE_COLOR=1 /bin/bash build.sh`.cwd(`/root/projects/staging/${safeProjectName}/scripts`)
+    .nothrow()
+    .quiet();
 
-    await Bun.write(errorPath, JSON.stringify(error));
-    await ctx.replyWithDocument(new InputFile(errorPath));
-  } finally {
-    // Hapus lock setelah selesai
-    eventLock.delete(command.id);
-    const duration = formatDistanceToNow(new Date(event.startedAt), { addSuffix: true });
-    await ctx.reply(
-      dedent`[INFO] Build selesai.
-      Durasi: ${duration}
-      User: @${event.user}`
-    );
-  }
+  await fs.writeFile(logPath, stdout.toString("utf8"));
+  await fs.writeFile(errorPath, stderr.toString("utf8"));
+  await ctx.replyWithDocument(new InputFile(logPath));
+  await ctx.replyWithDocument(new InputFile(errorPath));
+
+  const duration = formatDistanceToNow(new Date(event.startedAt), { addSuffix: true });
+  await ctx.reply(
+    dedent`
+    Build  : selesai.
+    status : ${exitCode === 0 ? 'success' : 'failed'}
+    Durasi : ${duration}
+    User   : @${event.user}`
+  );
 }
 
 // Start polling for updates

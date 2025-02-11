@@ -1,5 +1,12 @@
-import {$} from "bun"
+import { $ } from "bun";
 
-for await (let line of $`echo "apa kabar"`.lines()){
-    console.log(line)
+const { stdout, stderr, exitCode } = await $`ls -m`
+  .nothrow()
+  .quiet();
+
+if (exitCode !== 0) {
+  console.log(`Non-zero exit code ${exitCode}`);
 }
+
+console.log(stdout.toString("utf-8"));
+console.log(stderr.toString("utf-8"));

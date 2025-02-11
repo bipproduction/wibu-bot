@@ -9,6 +9,7 @@ import { formatDistanceToNow } from 'date-fns';
 import path from 'path';
 const appPackage = Bun.file('./package.json').json();
 
+
 try {
   await fs.mkdir('/tmp/wibu-bot/logs', { recursive: true })
 } catch (error) {
@@ -201,30 +202,12 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
       throw new Error('Build process timed out');
     }, timeout);
 
-
     for await (const chunk of child.stdout) {
       const decodedChunk = decodedText.decode(chunk);
-      messageBuffer += decodedChunk;
-      logBuffer += `${decodedChunk}\n`;
-      // console.log(decodedChunk);
-
-      // Kirim sisa buffer jika ada
-      if (messageBuffer.length > 2000) {
-        while (messageBuffer.length > 0) {
-          await logFile.write(messageBuffer);
-        }
-      }
-    }
-
-
-    if (messageBuffer.length > 0) {
-      await ctx.reply(`[PROGRESS]\n${messageBuffer}`);
-      messageBuffer = '';
+      await fs.appendFile(logPath, decodedChunk);
     }
 
     ctx.reply(`[SUCCESS] Build ${command.project} selesai.`);
-
-    await Bun.write(logPath, logBuffer);
     await ctx.replyWithDocument(new InputFile(logPath));
     logBuffer = '';
   } catch (error) {
