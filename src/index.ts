@@ -54,6 +54,22 @@ const commandBuildStaging = [
   },
 ];
 
+// Define available build commands
+const commandLogsStaging = [
+  {
+    id: '1',
+    project: 'hipmi',
+    command: '/log_build_hipmi_staging',
+    description: 'Log project hipmi staging',
+  },
+  {
+    id: '2',
+    project: 'darmasaba',
+    command: '/log_build_darmasaba_staging',
+    description: 'Log project darmasaba staging',
+  },
+];
+
 // Use a Map for efficient locking mechanism
 const eventLock = new Map<string, EventMessage>();
 
@@ -67,9 +83,33 @@ bot.on('message', async (ctx) => {
     return;
   }
 
-  if(message === '/file'){
+  if (message === '/file') {
     const filePath = path.join(__dirname, '../package.json');
     await ctx.replyWithDocument(new InputFile(filePath));
+  }
+
+  if (message?.startsWith('/log')) {
+    const command = commandLogsStaging.find((cmd) => cmd.command === message);
+    if (!command) {
+      const help = commandLogsStaging
+        .map((command, index) => `${index + 1}. ${command.command} - ${command.description}`)
+        .join('\n');
+      const helpText = dedent`
+      PANDUAN SEDERHANA
+      ${help}
+    `;
+      await ctx.reply(helpText);
+      return;
+    }
+    try {
+      const logPath = `/tmp/wibu-bot/logs/build-${command.project.replace('log_build_', '')}-out.log`
+      const errorPath = `/tmp/wibu-bot/logs/build-${command.project.replace('log_build_', '')}-err.log`
+      await ctx.replyWithDocument(new InputFile(logPath));
+      await ctx.replyWithDocument(new InputFile(errorPath));
+    } catch (error) {
+      console.error(error)
+      await ctx.reply('[ERROR] Log tidak ditemukan.');
+    }
   }
 
   // Handle /start command
@@ -183,14 +223,14 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
     }
 
     ctx.reply(`[SUCCESS] Build ${command.project} selesai.`);
-    
+
     await Bun.write(logPath, logBuffer);
     await ctx.replyWithDocument(new InputFile(logPath));
     logBuffer = '';
   } catch (error) {
     console.error('[BUILD ERROR]', error);
     await ctx.reply(`[ERROR] Build gagal`);
-    
+
     await Bun.write(errorPath, JSON.stringify(error));
     await ctx.replyWithDocument(new InputFile(errorPath));
   } finally {
