@@ -178,14 +178,55 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
     return;
   }
 
+  const decodedText = new TextDecoder();
+  let messageBuffer: string = '';
+  let logBuffer = '';
+  let timeoutId;
   try {
 
     // Notify user that the build has started
     await ctx.reply(`[INFO] Memulai build ${command.project}...`);
-    const buildText = await $`/bin/bash build.sh`.cwd(`/root/projects/staging/${safeProjectName}/scripts`).text();
+
+    const bun = Bun.which("bun");
+    if (!bun) {
+      throw new Error("bun not found");
+    }
+    const child = spawn(["/bin/bash", 'build.sh'], {
+      cwd: `/root/projects/staging/${safeProjectName}/scripts`
+    })
+    const timeout = 900000; // 5 menit
+    timeoutId = setTimeout(() => {
+      ctx.reply('[ERROR] Build dibatalkan karena timeout.');
+      child.kill();
+      throw new Error('Build process timed out');
+    }, timeout);
+
+
+    for await (const chunk of child.stdout) {
+      const decodedChunk = decodedText.decode(chunk);
+      messageBuffer += decodedChunk;
+      logBuffer += `${decodedChunk}\n`;
+      // console.log(decodedChunk);
+
+      // Kirim sisa buffer jika ada
+      if (messageBuffer.length > 2000) {
+        while (messageBuffer.length > 0) {
+          await logFile.write(messageBuffer);
+        }
+      }
+    }
+
+
+    if (messageBuffer.length > 0) {
+      await ctx.reply(`[PROGRESS]\n${messageBuffer}`);
+      messageBuffer = '';
+    }
+
     ctx.reply(`[SUCCESS] Build ${command.project} selesai.`);
-    await Bun.write(logPath, buildText);
+
+    await Bun.write(logPath, logBuffer);
     await ctx.replyWithDocument(new InputFile(logPath));
+    logBuffer = '';
   } catch (error) {
     console.error('[BUILD ERROR]', error);
     await ctx.reply(`[ERROR] Build gagal`);
@@ -195,6 +236,7 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
   } finally {
     // Hapus lock setelah selesai
     eventLock.delete(command.id);
+    clearTimeout(timeoutId);
     const duration = formatDistanceToNow(new Date(event.startedAt), { addSuffix: true });
     await ctx.reply(
       dedent`[INFO] Build selesai.
