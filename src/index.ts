@@ -6,7 +6,7 @@ import { Bot, Context } from 'grammy';
 import moment from 'moment';
 import fs from 'fs/promises'
 import { formatDistanceToNow } from 'date-fns';
-
+const appPackage = Bun.file('./package.json').json();
 try {
   await fs.mkdir('/tmp/wibu-bot/logs', { recursive: true })
 } catch (error) {
@@ -58,6 +58,12 @@ const eventLock = new Map<string, EventMessage>();
 // Handler for incoming messages
 bot.on('message', async (ctx) => {
   const message = ctx.message.text;
+
+  if (message === '/version') {
+    const version = (await appPackage).version;
+    await ctx.reply(`Version: ${version}`);
+    return;
+  }
 
   // Handle /start command
   if (message === '/start') {
