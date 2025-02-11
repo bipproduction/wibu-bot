@@ -89,7 +89,9 @@ bot.on('message', async (ctx) => {
   }
 
   if (message?.startsWith('/log')) {
+
     const command = commandLogsStaging.find((cmd) => cmd.command === message);
+
     if (!command) {
       const help = commandLogsStaging
         .map((command, index) => `${index + 1}. ${command.command} - ${command.description}`)
@@ -101,15 +103,12 @@ bot.on('message', async (ctx) => {
       await ctx.reply(helpText);
       return;
     }
-    try {
-      const logPath = `/tmp/wibu-bot/logs/build-${command.project.replace('log_build_', '')}-out.log`
-      const errorPath = `/tmp/wibu-bot/logs/build-${command.project.replace('log_build_', '')}-err.log`
-      await ctx.replyWithDocument(new InputFile(logPath));
-      await ctx.replyWithDocument(new InputFile(errorPath));
-    } catch (error) {
-      console.error(error)
-      await ctx.reply('[ERROR] Log tidak ditemukan.');
-    }
+
+    const logPath = `/tmp/wibu-bot/logs/build-${command.project.replace('log_build_', '')}-out.log`
+    const errorPath = `/tmp/wibu-bot/logs/build-${command.project.replace('log_build_', '')}-err.log`
+    await ctx.replyWithDocument(new InputFile(logPath)).catch(() => { ctx.reply('[ERROR] Log build tidak ditemukan.') })
+    await ctx.replyWithDocument(new InputFile(errorPath)).catch(() => { ctx.reply('[ERROR] Log error tidak ditemukan.') })
+
   }
 
   // Handle /start command
