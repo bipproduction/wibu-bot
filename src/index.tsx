@@ -43,7 +43,10 @@ const app = new Elysia()
     .get('/logs/staging/:project', ({ params, request }) => {
       const { project } = params
       try {
-        return file(`/tmp/wibu-bot/logs/build-${project}-out.log`)
+        return {
+          out: file(`/tmp/wibu-bot/logs/build-${project}-out.log`),
+          err: file(`/tmp/wibu-bot/logs/build-${project}-err.log`)
+        }
       } catch (error) {
         console.error(error)
         return '[ERROR] File tidak ditemukan'
@@ -101,14 +104,14 @@ const commandLogsStaging = [
   {
     id: '1',
     project: 'hipmi',
-    command: '/log_build_hipmi_staging',
-    description: 'Log project hipmi staging',
+    command: '/log_hipmi',
+    description: 'Log project hipmi',
   },
   {
     id: '2',
     project: 'darmasaba',
-    command: '/log_build_darmasaba_staging',
-    description: 'Log project darmasaba staging',
+    command: '/log_darmasaba',
+    description: 'Log project darmasaba',
   },
 ];
 
@@ -149,8 +152,8 @@ bot.on('message', async (ctx) => {
       return;
     }
 
-    const logPath = `/tmp/wibu-bot/logs/build-${command.project.replace('log_build_', '')}-out.log`
-    const errorPath = `/tmp/wibu-bot/logs/build-${command.project.replace('log_build_', '')}-err.log`
+    const logPath = `/tmp/wibu-bot/logs/build-${command.project}-out.log`
+    const errorPath = `/tmp/wibu-bot/logs/build-${command.project}-err.log`
     await ctx.replyWithDocument(new InputFile(logPath)).catch(() => { ctx.reply('[ERROR] Log build tidak ditemukan.') })
     await ctx.replyWithDocument(new InputFile(errorPath)).catch(() => { })
 
@@ -250,8 +253,8 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
       await fs.appendFile(errorPath, decodedChunk);
     }
 
-    await ctx.replyWithDocument(new InputFile(logPath));
-    await ctx.replyWithDocument(new InputFile(errorPath));
+    await ctx.replyWithDocument(new InputFile(logPath)).catch(() => { });
+    await ctx.replyWithDocument(new InputFile(errorPath)).catch(() => { });
 
     const duration = formatDistanceToNow(new Date(event.startedAt), { addSuffix: true });
     await ctx.reply(
