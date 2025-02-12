@@ -244,6 +244,12 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
       await fs.appendFile(logPath, decodedChunk);
     }
 
+    await fs.writeFile(logPath, '');
+    for await (const chunk of child.stderr || []) {
+      const decodedChunk = decodedText.decode(chunk);
+      await fs.appendFile(errorPath, decodedChunk);
+    }
+
     await ctx.replyWithDocument(new InputFile(logPath));
     await ctx.replyWithDocument(new InputFile(errorPath));
 
@@ -257,6 +263,8 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
     );
 
   } catch (error) {
+    await fs.writeFile(logPath, '');
+    await fs.appendFile(errorPath, `${error}\n`);
     ctx.reply('[ERROR] Build gagal');
   } finally {
     eventLock.delete(command.id);
