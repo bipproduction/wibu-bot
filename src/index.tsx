@@ -40,7 +40,7 @@ const app = new Elysia()
   .group("/api", (app) => app
     .get('/logs/staging/:project', function* (ctx) {
 
-      return file(`/tmp/wibu-bot/logs/build-build_${ctx.params.project}staging-out.log`)
+      return file(`/tmp/wibu-bot/logs/build-build_${ctx.params.project}_staging-out.log`)
     })
   )
 
