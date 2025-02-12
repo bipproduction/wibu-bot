@@ -49,10 +49,6 @@ const app = new Elysia()
         return '[ERROR] File tidak ditemukan'
       }
     })
-    .get("/host", ({ request }) => {
-      host = request.url.replace('/api/host', '')
-      return host
-    })
   )
 
 try {
@@ -125,9 +121,9 @@ bot.on('message', async (ctx) => {
 
   if (message === '/version') {
     const version = (await appPackage).version;
+
     await ctx.reply(dedent`
       version: ${version}
-      host: ${host}
       `);
     return;
   }
@@ -212,10 +208,9 @@ let child: Subprocess<"ignore", "pipe", "inherit"> | null = null;
 async function processBuild({ ctx, command, event }: { ctx: Context; command: any; event: EventMessage }) {
   buildTimer = setInterval(async () => {
     count++
-    ctx.reply(`[INFO] processing ${command.project} ${count} ...`);
     if (count > 15) {
       clearInterval(buildTimer as NodeJS.Timeout);
-      ctx.reply(`[INFO] processing selesai karena timeout`);
+      ctx.reply(`[ERROR] processing selesai karena timeout , BUILD GAGAL`);
       child?.kill();
     }
   }, 1000 * 60) as NodeJS.Timeout;
@@ -242,6 +237,8 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
       cwd: `/root/projects/staging/${safeProjectName}/scripts`
     })
 
+    ctx.reply(`[INFO] Build ${command.project} sedang dijalankan oleh @${event.user}, silakan tunggu selesai...`);
+    ctx.reply(`[INFO] log: ${Bun.env.HOST}/api/logs/staging/${command.project}`);
     for await (const chunk of child.stdout) {
       const decodedChunk = decodedText.decode(chunk);
       await fs.appendFile(logPath, decodedChunk);
@@ -253,10 +250,10 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
     const duration = formatDistanceToNow(new Date(event.startedAt), { addSuffix: true });
     await ctx.reply(
       dedent`
-    Build  : selesai.
-    exitCode : ${child.exitCode}
-    Durasi : ${duration}
-    User   : @${event.user}`
+        Build  : selesai.
+        exitCode : ${child.exitCode}
+        Durasi : ${duration}
+        User   : @${event.user}`
     );
 
   } catch (error) {
