@@ -1,4 +1,4 @@
-const PORT = process.env.PORT
+const PORT = process.env.PORT || 3150
 module.exports = {
     "apps": [
         {
