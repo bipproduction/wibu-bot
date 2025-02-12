@@ -22,8 +22,6 @@ const corsConfig = {
   credentials: true,
 };
 
-let interval: NodeJS.Timeout | null = null
-let timeout: NodeJS.Timeout | null = null
 const app = new Elysia()
   .use(swagger({ path: "/api/docs" }))
   .use(cors(corsConfig))
@@ -40,13 +38,19 @@ const app = new Elysia()
     )
   })
   .group("/api", (app) => app
-    .get('/logs/staging/:project', ({ params, request }) => {
+    .get('/logs/staging/out/:project', ({ params, request }) => {
       const { project } = params
       try {
-        return {
-          out: file(`/tmp/wibu-bot/logs/build-${project}-out.log`),
-          err: file(`/tmp/wibu-bot/logs/build-${project}-err.log`)
-        }
+        return file(`/tmp/wibu-bot/logs/build-${project}-out.log`)
+      } catch (error) {
+        console.error(error)
+        return '[ERROR] File tidak ditemukan'
+      }
+    })
+    .get('/logs/staging/err/:project', ({ params, request }) => {
+      const { project } = params
+      try {
+        return file(`/tmp/wibu-bot/logs/build-${project}-err.log`)
       } catch (error) {
         console.error(error)
         return '[ERROR] File tidak ditemukan'
@@ -129,11 +133,6 @@ bot.on('message', async (ctx) => {
       version: ${version}
       `);
     return;
-  }
-
-  if (message === '/file') {
-    const filePath = path.join(__dirname, '../package.json');
-    await ctx.replyWithDocument(new InputFile(filePath));
   }
 
   if (message?.startsWith('/log')) {
