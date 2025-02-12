@@ -265,7 +265,7 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
 }
 
 // Start polling for updates
-// bot.start();
+bot.start();
 app.listen(Bun.env.PORT, () => {
   console.log(`Listening on port ${Bun.env.PORT}`);
 });
