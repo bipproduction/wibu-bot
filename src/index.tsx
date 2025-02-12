@@ -237,8 +237,8 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
       cwd: `/root/projects/staging/${safeProjectName}/scripts`
     })
 
-    ctx.reply(`[INFO] Build ${command.project} sedang dijalankan oleh @${event.user}, silakan tunggu selesai...`);
     ctx.reply(`[INFO] log: ${Bun.env.HOST}/api/logs/staging/${command.project}`);
+    ctx.reply(`[INFO] Build ${command.project} sedang dijalankan oleh @${event.user}, silakan tunggu selesai...`);
     for await (const chunk of child.stdout) {
       const decodedChunk = decodedText.decode(chunk);
       await fs.appendFile(logPath, decodedChunk);
