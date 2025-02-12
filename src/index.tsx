@@ -1,19 +1,18 @@
 // src/index.ts
 import cors from '@elysiajs/cors';
 import { Html } from '@elysiajs/html';
-import Stream from '@elysiajs/stream';
 import swagger from '@elysiajs/swagger';
 import { spawn, Subprocess } from 'bun';
 import { formatDistanceToNow } from 'date-fns';
 import dedent from 'dedent';
 import { config } from 'dotenv';
-import Elysia, { file, HTTPMethod, redirect } from 'elysia';
+import Elysia, { file, HTTPMethod } from 'elysia';
 import fs from 'fs/promises';
 import { Bot, Context, InputFile } from 'grammy';
 import moment from 'moment';
 import path from 'path';
 const appPackage = Bun.file('./package.json').json();
-
+let host: string | null = null
 const corsConfig = {
   origin: "*",
   methods: ["GET", "POST", "PATCH", "DELETE", "PUT"] as HTTPMethod[],
@@ -41,7 +40,7 @@ const app = new Elysia()
     )
   })
   .group("/api", (app) => app
-    .get('/logs/staging/:project', ({ params }) => {
+    .get('/logs/staging/:project', ({ params, request }) => {
       const { project } = params
       try {
         return file(`/tmp/wibu-bot/logs/build-${project}-out.log`)
@@ -49,6 +48,10 @@ const app = new Elysia()
         console.error(error)
         return '[ERROR] File tidak ditemukan'
       }
+    })
+    .get("/host", ({ request }) => {
+      host = request.url.replace('/api/host', '')
+      return host
     })
   )
 
@@ -122,7 +125,10 @@ bot.on('message', async (ctx) => {
 
   if (message === '/version') {
     const version = (await appPackage).version;
-    await ctx.reply(`Version: ${version}`);
+    await ctx.reply(dedent`
+      version: ${version}
+      host: ${host}
+      `);
     return;
   }
 
