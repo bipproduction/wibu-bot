@@ -1,5 +1,5 @@
 const PORT = process.env.PORT || 3040
-module.export = {
+module.exports = {
     "apps": [
         {
             "name": `wibu-bot-${PORT}`,
