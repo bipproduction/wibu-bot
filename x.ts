@@ -1,12 +1,13 @@
-import { $ } from "bun";
+import fs from 'fs/promises';
 
-const { stdout, stderr, exitCode,  } = await $`htop`
-  .nothrow()
-  .quiet();
+; (async () => {
 
-if (exitCode !== 0) {
-  console.log(`Non-zero exit code ${exitCode}`);
-}
+    const decoder = new TextDecoder();
+    const proc = Bun.spawn(["/bin/bash", "apa.sh"]);
+    const text = new Response(proc.stdout);
 
-console.log(stdout.toString("utf-8"));
-console.log(stderr.toString("utf-8"));
+    for await (const chunk of text.body || []) {
+        fs.appendFile('x.log', decoder.decode(chunk));
+    }
+
+})();

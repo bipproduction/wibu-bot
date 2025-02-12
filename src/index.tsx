@@ -1,13 +1,48 @@
 // src/index.ts
-import { $, spawn, Subprocess } from 'bun';
+import cors from '@elysiajs/cors';
+import { Html } from '@elysiajs/html';
+import swagger from '@elysiajs/swagger';
+import { spawn, Subprocess } from 'bun';
+import { formatDistanceToNow } from 'date-fns';
 import dedent from 'dedent';
 import { config } from 'dotenv';
+import Elysia, { file, HTTPMethod } from 'elysia';
+import fs from 'fs/promises';
 import { Bot, Context, InputFile } from 'grammy';
 import moment from 'moment';
-import fs from 'fs/promises'
-import { formatDistanceToNow } from 'date-fns';
 import path from 'path';
 const appPackage = Bun.file('./package.json').json();
+
+const corsConfig = {
+  origin: "*",
+  methods: ["GET", "POST", "PATCH", "DELETE", "PUT"] as HTTPMethod[],
+  allowedHeaders: "*",
+  exposedHeaders: "*",
+  maxAge: 5,
+  credentials: true,
+};
+
+const app = new Elysia()
+  .use(swagger({ path: "/api/docs" }))
+  .use(cors(corsConfig))
+  .get("/", ({ set }) => {
+    set.headers = {
+      "content-type": "text/html",
+    }
+    return (
+      <html lang='en'>
+        <body>
+          <h1>Wibu Bot</h1>
+        </body>
+      </html>
+    )
+  })
+  .group("/api", (app) => app
+    .get('/logs/staging/:project', function* (ctx) {
+
+      return file(`/tmp/wibu-bot/logs/build-build_${ctx.params.project}staging-out.log`)
+    })
+  )
 
 try {
   await fs.mkdir('/tmp/wibu-bot/logs', { recursive: true })
@@ -107,7 +142,7 @@ bot.on('message', async (ctx) => {
     const logPath = `/tmp/wibu-bot/logs/build-${command.project.replace('log_build_', '')}-out.log`
     const errorPath = `/tmp/wibu-bot/logs/build-${command.project.replace('log_build_', '')}-err.log`
     await ctx.replyWithDocument(new InputFile(logPath)).catch(() => { ctx.reply('[ERROR] Log build tidak ditemukan.') })
-    await ctx.replyWithDocument(new InputFile(errorPath)).catch(() => { ctx.reply('[ERROR] Log error tidak ditemukan.') })
+    await ctx.replyWithDocument(new InputFile(errorPath)).catch(() => { })
 
   }
 
@@ -123,7 +158,6 @@ bot.on('message', async (ctx) => {
     await ctx.reply(helpText);
     return;
   }
-
 
   // Handle build commands
   if (message?.startsWith('/build')) {
@@ -157,15 +191,14 @@ bot.on('message', async (ctx) => {
   }
 });
 
-
 let buildTimer: NodeJS.Timeout | null = null;
 let count = 0
 const decodedText = new TextDecoder();
 let child: Subprocess<"ignore", "pipe", "inherit"> | null = null;
 async function processBuild({ ctx, command, event }: { ctx: Context; command: any; event: EventMessage }) {
   buildTimer = setInterval(async () => {
-    ctx.reply(`[INFO] processing ${count} ...`);
     count++
+    ctx.reply(`[INFO] processing ${command.project} ${count} ...`);
     if (count > 15) {
       clearInterval(buildTimer as NodeJS.Timeout);
       ctx.reply(`[INFO] processing selesai karena timeout`);
@@ -194,14 +227,10 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
     child = spawn(["/bin/bash", 'build.sh'], {
       cwd: `/root/projects/staging/${safeProjectName}/scripts`
     })
+
     for await (const chunk of child.stdout) {
       const decodedChunk = decodedText.decode(chunk);
       await fs.appendFile(logPath, decodedChunk);
-    }
-
-    for await (const chunk of child.stderr || []) {
-      const decodedChunk = decodedText.decode(chunk);
-      await fs.appendFile(errorPath, decodedChunk);
     }
 
     await ctx.replyWithDocument(new InputFile(logPath));
@@ -211,7 +240,7 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
     await ctx.reply(
       dedent`
     Build  : selesai.
-    status : ${child.exitCode === 0 ? 'success' : 'failed'}
+    exitCode : ${child.exitCode}
     Durasi : ${duration}
     User   : @${event.user}`
     );
@@ -225,7 +254,10 @@ async function processBuild({ ctx, command, event }: { ctx: Context; command: an
 }
 
 // Start polling for updates
-bot.start();
+// bot.start();
+app.listen(Bun.env.PORT, () => {
+  console.log(`Listening on port ${Bun.env.PORT}`);
+});
 
 // Handle shutdown signals
 process.on('SIGINT', () => {
