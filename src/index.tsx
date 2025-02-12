@@ -1,12 +1,13 @@
 // src/index.ts
 import cors from '@elysiajs/cors';
 import { Html } from '@elysiajs/html';
+import Stream from '@elysiajs/stream';
 import swagger from '@elysiajs/swagger';
 import { spawn, Subprocess } from 'bun';
 import { formatDistanceToNow } from 'date-fns';
 import dedent from 'dedent';
 import { config } from 'dotenv';
-import Elysia, { file, HTTPMethod } from 'elysia';
+import Elysia, { file, HTTPMethod, redirect } from 'elysia';
 import fs from 'fs/promises';
 import { Bot, Context, InputFile } from 'grammy';
 import moment from 'moment';
@@ -22,6 +23,8 @@ const corsConfig = {
   credentials: true,
 };
 
+let interval: NodeJS.Timeout | null = null
+let timeout: NodeJS.Timeout | null = null
 const app = new Elysia()
   .use(swagger({ path: "/api/docs" }))
   .use(cors(corsConfig))
@@ -38,9 +41,14 @@ const app = new Elysia()
     )
   })
   .group("/api", (app) => app
-    .get('/logs/staging/:project', function* (ctx) {
-
-      return file(`/tmp/wibu-bot/logs/build-hipmi-out.log`)
+    .get('/logs/staging/:project', ({ params }) => {
+      const { project } = params
+      try {
+        return file(`/tmp/wibu-bot/logs/build-${project}-out.log`)
+      } catch (error) {
+        console.error(error)
+        return '[ERROR] File tidak ditemukan'
+      }
     })
   )
 
