@@ -29,10 +29,11 @@ type EventMessage = {
 // Use a Map for efficient locking mechanism
 const eventLock = new Map<string, EventMessage>();
 type ParamsHandler = {
-    ctx: Context,
+    ctx: Context
     id: string
     user: string
     command: string
+    projectName: string | undefined
 }
 
 // Initialize Telegram bot
@@ -52,11 +53,13 @@ const listMenu = [
     {
         "id": Bun.randomUUIDv7(),
         "cmd": "/buidStagingHipmi",
+        "projectName": "hipmi",
         "handler": buildHipmiStaging
     },
     {
         "id": Bun.randomUUIDv7(),
         "cmd": "/buidStagingDarmasaba",
+        "projectName": "darmasaba",
         "handler": buildDarmasabaStaging
     },
 ]
@@ -70,7 +73,7 @@ async function buildDarmasabaStaging(params: ParamsHandler) {
 }
 
 async function build(params: ParamsHandler) {
-    const { ctx, id, user, command } = params
+    const { ctx, id, user, command, projectName } = params
 
     // Check if the command is already running
     if (eventLock.has(id)) {
@@ -89,7 +92,7 @@ async function build(params: ParamsHandler) {
     eventLock.set(id, event);
 
     try {
-        await processBuild({ id, user, ctx, projectName: command })
+        await processBuild({ id, user, ctx, projectName })
     } catch (error) {
         console.error(error)
         await ctx.reply('[ERROR] Command tidak dikenali.');
@@ -119,11 +122,11 @@ bot.on('message', async (ctx) => {
 
     const cmd = listMenu.find((item) => item.cmd === message);
     if (!cmd) throw new Error('Command tidak dikenali.');
-    await cmd.handler({ ctx, id: cmd.id, user, command: cmd.cmd });
+    await cmd.handler({ ctx, id: cmd.id, user, command: cmd.cmd, projectName: cmd.projectName });
 });
 
-async function processBuild({ id, user, ctx, projectName }: { id: string; user: string; ctx: Context; projectName: string; }) {
-
+async function processBuild({ id, user, ctx, projectName }: { id: string; user: string; ctx: Context; projectName: string | undefined; }) {
+    if (!projectName) throw new Error('Project name is required');
     let buildTimer: NodeJS.Timeout | null = null;
     let count = 0
     const decodedText = new TextDecoder();
