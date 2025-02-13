@@ -76,8 +76,8 @@ async function logs(params: ParamsHandler) {
     const fileNames = await fs.readdir(Bun.env.WIBU_LOGS_DIR)
     const files = fileNames.map(fn => {
         const fileName = path.basename(fn)
-        const projectName = fileName.split('-')[0]
-        const type = fileName.split('-')[1]
+        const projectName = fileName.split('-')[1]
+        const type = fileName.split('-')[2]
         return `${Bun.env.WIBU_URL}/api/logs/staging/${type}/${projectName}`
     }).join('\n')
     await ctx.reply(files)
