@@ -190,8 +190,8 @@ async function processBuild({ id, user, ctx, projectName }: { id: string; user: 
         }
 
         // Tulis status [FINISHED] ke log dan error file
-        await fs.appendFile(logPath, `\n[FINISHED] Build selesai. ${new Date().toISOString()}\n`);
-        await fs.appendFile(errorPath, `\n[FINISHED] Build selesai. ${new Date().toISOString()}\n`);
+        await fs.writeFile(logPath, `\n[FINISHED] Build selesai. ${new Date().toISOString()}\n`);
+        await fs.writeFile(errorPath, `\n[FINISHED] Build selesai. ${new Date().toISOString()}\n`);
 
         // Tambahkan stdout dan stderr buffer ke file log
         await fs.appendFile(logPath, `\n--- STDOUT ---\n${stdoutBuffer}`);
