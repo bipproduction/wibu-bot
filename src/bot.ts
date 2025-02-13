@@ -74,7 +74,12 @@ async function logs(params: ParamsHandler) {
     const { ctx } = params
     if (!Bun.env.WIBU_LOGS_DIR) throw new Error('WIBU_LOGS_DIR is not set');
     const fileNames = await fs.readdir(Bun.env.WIBU_LOGS_DIR)
-    const files = fileNames.map(fileName => "/logs_" + path.basename(fileName)).join('\n')
+    const files = fileNames.map(fn => {
+        const fileName = path.basename(fn)
+        const projectName = fileName.split('-')[0]
+        const type = fileName.split('-')[1]
+        return `${Bun.env.WIBU_URL}/api/logs/staging/${type}/${projectName}`
+    }).join('\n')
     await ctx.reply(files)
 }
 
