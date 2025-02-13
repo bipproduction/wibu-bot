@@ -1,4 +1,15 @@
-const PORT = process.env.PORT || 3150
+const dotenv = require('dotenv');
+dotenv.config({
+    path: './.env.local',
+    override: true
+});
+
+const PORT = process.env.WIBU_PORT
+
+if (!PORT) {
+    console.error('[ERROR] PORT is not defined');
+    process.exit(1);
+}
 module.exports = {
     "apps": [
         {
