@@ -164,8 +164,8 @@ async function processBuild({ id, user, ctx, projectName }: { id: string; user: 
             cwd: `/root/projects/staging/${safeProjectName}/scripts`
         })
 
-        ctx.reply(`[INFO] log: ${Bun.env.URL}/api/logs/staging/out/${projectName}`);
-        ctx.reply(`[INFO] log: ${Bun.env.URL}/api/logs/staging/err/${projectName}`);
+        ctx.reply(`[INFO] log: ${Bun.env.WIBU_URL}/api/logs/staging/out/${projectName}`);
+        ctx.reply(`[INFO] log: ${Bun.env.WIBU_URL}/api/logs/staging/err/${projectName}`);
 
         ctx.reply(`[INFO] Build ${projectName} sedang dijalankan oleh @${user}, silakan tunggu selesai...`);
         for await (const chunk of child.stdout) {
