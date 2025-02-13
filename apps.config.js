@@ -16,7 +16,7 @@ module.exports = {
             "name": `wibu-bot-${PORT}`,
             "script": "bun",
             "args": "--bun --smol --env-file=/root/projects/wibu-bot/.env run start",
-            "exec_mode": "cluster",
+            "exec_mode": "fork",
             "instances": 1,
             "env": {
                 "NODE_ENV": "production",

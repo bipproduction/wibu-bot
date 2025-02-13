@@ -2,7 +2,7 @@
 
 import server from '@/server';
 import { config } from 'dotenv';
-import teleBot from './bot';
+import teleBot from '@/bot';
 
 // Load environment variables
 config({
