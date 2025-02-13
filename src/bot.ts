@@ -5,6 +5,7 @@ import fs from "fs/promises";
 import { Bot, Context, InputFile } from "grammy";
 import moment from "moment";
 const appPackage = Bun.file('./package.json').json();
+import path from "path";
 
 if (!Bun.env.WIBU_BOT_TOKEN || !Bun.env.WIBU_LOGS_DIR) {
     console.error('[ERROR] BOT_TOKEN or WIBU_LOGS_DIR is not defined');
@@ -62,7 +63,20 @@ const listMenu = [
         "projectName": "darmasaba",
         "handler": buildDarmasabaStaging
     },
+    {
+        "id": Bun.randomUUIDv7(),
+        "cmd": "/logs",
+        "handler": logs
+    }
 ]
+
+async function logs(params: ParamsHandler) {
+    const { ctx } = params
+    if (!Bun.env.WIBU_LOGS_DIR) throw new Error('WIBU_LOGS_DIR is not set');
+    const fileNames = await fs.readdir(Bun.env.WIBU_LOGS_DIR)
+    const files = fileNames.map(fileName => "/logs_" + path.basename(fileName)).join('\n')
+    await ctx.reply(files)
+}
 
 async function buildHipmiStaging(params: ParamsHandler) {
     build(params)
