@@ -168,25 +168,34 @@ async function processBuild({ id, user, ctx, projectName }: { id: string; user: 
         ctx.reply(`[INFO] log: ${Bun.env.WIBU_URL}/api/logs/staging/err/${projectName}`);
 
         ctx.reply(`[INFO] Build ${projectName} sedang dijalankan oleh @${user}, silakan tunggu selesai...`);
-        for await (const chunk of child.stdout) {
-            const decodedChunk = decodedText.decode(chunk);
-            await fs.appendFile(logPath, decodedChunk);
+        // Simpan buffer untuk stdout dan stderr
+        let stdoutBuffer = '';
+        let stderrBuffer = '';
+
+        // Baca stdout dan stderr secara bertahap
+        if (child.stdout) {
+            for await (const chunk of child.stdout) {
+                const decodedChunk = decodedText.decode(chunk);
+                stdoutBuffer += decodedChunk; // Simpan ke buffer
+                await fs.appendFile(logPath, decodedChunk); // Tulis ke file secara real-time
+            }
         }
 
-        await fs.writeFile(logPath, '');
-        for await (const chunk of child.stderr || []) {
-            const decodedChunk = decodedText.decode(chunk);
-            await fs.appendFile(errorPath, decodedChunk);
+        if (child.stderr) {
+            for await (const chunk of child.stderr as any) {
+                const decodedChunk = decodedText.decode(chunk);
+                stderrBuffer += decodedChunk; // Simpan ke buffer
+                await fs.appendFile(errorPath, decodedChunk); // Tulis ke file secara real-time
+            }
         }
 
-        await ctx.replyWithDocument(new InputFile(logPath)).catch(() => { });
-        await ctx.replyWithDocument(new InputFile(errorPath)).catch(() => { });
+        // Tulis status [FINISHED] ke log dan error file
+        await fs.appendFile(logPath, `\n[FINISHED] Build selesai. ${new Date().toISOString()}\n`);
+        await fs.appendFile(errorPath, `\n[FINISHED] Build selesai. ${new Date().toISOString()}\n`);
 
-        await fs.writeFile(logPath, `[FINISHED] Build selesai. ${new Date().toISOString()}`);
-        await fs.appendFile(logPath, child.stdout.toString());
-
-        await fs.writeFile(errorPath, `[FINISHED] Build selesai. ${new Date().toISOString()}`);
-        await fs.appendFile(errorPath, (child.stderr || '{}').toString());
+        // Tambahkan stdout dan stderr buffer ke file log
+        await fs.appendFile(logPath, `\n--- STDOUT ---\n${stdoutBuffer}`);
+        await fs.appendFile(errorPath, `\n--- STDERR ---\n${stderrBuffer}`);
 
         const duration = formatDistanceToNow(new Date(event.startedAt), { addSuffix: true });
         await ctx.reply(
