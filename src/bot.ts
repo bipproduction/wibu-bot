@@ -144,8 +144,8 @@ async function processBuild({ id, user, ctx, projectName }: { id: string; user: 
 
     const logPath = `/tmp/wibu-bot/logs/build-${projectName}-out.log`
     const errorPath = `/tmp/wibu-bot/logs/build-${projectName}-err.log`
-    await fs.unlink(logPath).catch(() => { })
-    await fs.unlink(errorPath).catch(() => { })
+    await fs.writeFile(logPath, '');
+    await fs.writeFile(errorPath, '');
 
     // Validasi nama proyek
     const safeProjectName = /^[a-zA-Z0-9_-]+$/.test(projectName)
@@ -181,6 +181,15 @@ async function processBuild({ id, user, ctx, projectName }: { id: string; user: 
 
         await ctx.replyWithDocument(new InputFile(logPath)).catch(() => { });
         await ctx.replyWithDocument(new InputFile(errorPath)).catch(() => { });
+
+        const hasil = await (new Response(child.stdout)).text()
+        const error = await (new Response(child.stderr)).text()
+
+        await fs.writeFile(logPath, `[FINISHED] Build selesai. ${new Date().toISOString()}`);
+        await fs.appendFile(logPath, hasil);
+
+        await fs.writeFile(errorPath, `[FINISHED] Build selesai. ${new Date().toISOString()}`);
+        await fs.appendFile(errorPath, error);
 
         const duration = formatDistanceToNow(new Date(event.startedAt), { addSuffix: true });
         await ctx.reply(
