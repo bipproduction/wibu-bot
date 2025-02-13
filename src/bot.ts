@@ -182,14 +182,11 @@ async function processBuild({ id, user, ctx, projectName }: { id: string; user: 
         await ctx.replyWithDocument(new InputFile(logPath)).catch(() => { });
         await ctx.replyWithDocument(new InputFile(errorPath)).catch(() => { });
 
-        const hasil = await (new Response(child.stdout)).text()
-        const error = await (new Response(child.stderr)).text()
-
         await fs.writeFile(logPath, `[FINISHED] Build selesai. ${new Date().toISOString()}`);
-        await fs.appendFile(logPath, hasil);
+        await fs.appendFile(logPath, child.stdout.toString());
 
         await fs.writeFile(errorPath, `[FINISHED] Build selesai. ${new Date().toISOString()}`);
-        await fs.appendFile(errorPath, error);
+        await fs.appendFile(errorPath, (child.stderr || '{}').toString());
 
         const duration = formatDistanceToNow(new Date(event.startedAt), { addSuffix: true });
         await ctx.reply(
