@@ -150,7 +150,7 @@ async function processBuild({ id, user, ctx, projectName }: { id: string; user: 
         : null;
 
     if (!safeProjectName) {
-        await ctx.reply('[ERROR] Nama proyek tidak valid.');
+        await ctx.reply(`[ERROR] Nama proyek tidak valid. ${projectName}`);
         eventLock.delete(id); // Pastikan lock dihapus
         return;
     }
