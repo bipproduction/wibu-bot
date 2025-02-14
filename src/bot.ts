@@ -6,6 +6,7 @@ import { Bot, Context, InputFile } from "grammy";
 import moment from "moment";
 const appPackage = Bun.file('./package.json').json();
 import path from "path";
+import findPort from "./lib/find-port";
 
 if (!Bun.env.WIBU_BOT_TOKEN || !Bun.env.WIBU_LOGS_DIR) {
     console.error('[ERROR] BOT_TOKEN or WIBU_LOGS_DIR is not defined');
@@ -67,8 +68,19 @@ const listMenu = [
         "id": Bun.randomUUIDv7(),
         "cmd": "/logs",
         "handler": logs
+    },
+    {
+        "id": Bun.randomUUIDv7(),
+        "cmd": "/findPort",
+        "handler": handleFindPort
     }
 ]
+
+async function handleFindPort(params: ParamsHandler) {
+    const { ctx } = params
+    const port = await findPort()
+    await ctx.reply(port?.join(', ') || 'Tidak ada port yang tersedia')
+}
 
 async function logs(params: ParamsHandler) {
     const { ctx } = params
