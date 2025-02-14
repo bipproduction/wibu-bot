@@ -78,8 +78,13 @@ const listMenu = [
 
 async function handleFindPort(params: ParamsHandler) {
     const { ctx } = params
-    const port = await findPort({ count: 10 })
-    await ctx.reply(port?.join(', ') || 'Tidak ada port yang tersedia')
+    try {
+        const port = await findPort({ count: 10 })
+        await ctx.reply(port?.join(', ') || 'Tidak ada port yang tersedia')
+    } catch (error) {
+        console.error(error)
+        await ctx.reply('Terjadi kesalahan')
+    }
 }
 
 async function logs(params: ParamsHandler) {
