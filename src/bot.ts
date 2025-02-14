@@ -71,7 +71,7 @@ const listMenu = [
     },
     {
         "id": Bun.randomUUIDv7(),
-        "cmd": "/findPort1",
+        "cmd": "/findPort",
         "handler": handleFindPort
     }
 ]
