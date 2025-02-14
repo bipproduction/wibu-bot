@@ -71,14 +71,14 @@ const listMenu = [
     },
     {
         "id": Bun.randomUUIDv7(),
-        "cmd": "/findPort",
+        "cmd": "/findPort1",
         "handler": handleFindPort
     }
 ]
 
 async function handleFindPort(params: ParamsHandler) {
     const { ctx } = params
-    const port = await findPort()
+    const port = await findPort({ count: 10 })
     await ctx.reply(port?.join(', ') || 'Tidak ada port yang tersedia')
 }
 
