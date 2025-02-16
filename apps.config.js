@@ -1,10 +1,6 @@
-const dotenv = require('dotenv');
-dotenv.config({
-    path: './.env.local',
-    override: true
-});
-
+const NAME = process.env.WIBU_NAME
 const PORT = process.env.WIBU_PORT
+const CWD = process.env.WIBU_CWD
 
 if (!PORT) {
     console.error('[ERROR] PORT is not defined');
@@ -13,9 +9,9 @@ if (!PORT) {
 module.exports = {
     "apps": [
         {
-            "name": `wibu-bot-${PORT}`,
+            "name": `${NAME}-${PORT}`,
             "script": "bun",
-            "args": "--bun --smol --env-file=/root/projects/wibu-bot/.env run start",
+            "args": "run start",
             "exec_mode": "fork",
             "instances": 1,
             "env": {
@@ -33,8 +29,8 @@ module.exports = {
             "retain": 5,
             "compress": true,
             "source_map_support": false,
-            "cwd": "/root/projects/wibu-bot",
-            "namespace": "wibu-bot"
+            "cwd": CWD,
+            "namespace": NAME
         }
     ]
 }

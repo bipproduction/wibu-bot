@@ -66,6 +66,12 @@ const listMenu = [
     },
     {
         "id": Bun.randomUUIDv7(),
+        "cmd": "/buidStagingDesaDarmasaba",
+        "projectName": "desa-darmasaba",
+        "handler": buildStagingDesaDarmasaba
+    },
+    {
+        "id": Bun.randomUUIDv7(),
         "cmd": "/logs",
         "handler": logs
     },
@@ -98,6 +104,10 @@ async function logs(params: ParamsHandler) {
         return `${Bun.env.WIBU_URL}/api/logs/staging/${type}/${projectName}`
     }).join('\n')
     await ctx.reply(files)
+}
+
+async function buildStagingDesaDarmasaba(params: ParamsHandler) {
+    build(params)
 }
 
 async function buildHipmiStaging(params: ParamsHandler) {

@@ -10,6 +10,7 @@ import fs from 'fs/promises';
     //     fs.appendFile('x.log', decoder.decode(chunk));
     // }
 
-    console.log(Bun.randomUUIDv7())
+
+    console.log(process.env.NAMA)
 
 })();
