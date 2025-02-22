@@ -2,6 +2,7 @@ import cors from "@elysiajs/cors";
 import swagger from "@elysiajs/swagger";
 import Elysia, { file, HTTPMethod } from "elysia";
 import fs from 'fs/promises';
+import findPort from "./lib/find-port";
 
 const corsConfig = {
     origin: "*",
@@ -41,6 +42,11 @@ const app = new Elysia()
                 console.error(error)
                 return '[ERROR] File tidak ditemukan'
             }
+        })
+        .get('/find-port/:count?', async ({ params, request }) => {
+            const { count } = params
+            const port = await findPort({ count: count ? parseInt(count) : 1 })
+            return port
         })
     )
 
