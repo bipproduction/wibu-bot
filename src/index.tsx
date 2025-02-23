@@ -16,5 +16,5 @@ if (!Bun.env.WIBU_PORT || !Bun.env.WIBU_BOT_TOKEN || !Bun.env.WIBU_LOGS_DIR || !
 }
 
 // Start polling for updates
-teleBot.start();
+teleBot.start().catch((err) => console.log("gramy bot tele error"));
 server.start();

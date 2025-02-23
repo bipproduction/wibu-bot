@@ -276,12 +276,12 @@ process.on('SIGTERM', () => {
 });
 
 const teleBot = {
-    start: () => {
-        bot.start();
+    start: async () => {
+        await bot.start();
         console.log('[BOT] Started');
     },
-    stop: () => {
-        bot.stop();
+    stop: async () => {
+        await bot.stop();
         console.log('[BOT] Stopped');
     },
     eventLock
